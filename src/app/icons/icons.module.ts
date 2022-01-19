@@ -52,6 +52,7 @@ import {
   Share2,
   ShoppingBag,
   ShoppingCart,
+  ThumbsUp,
   Trash2,
   TrendingUp,
   User,
@@ -59,6 +60,7 @@ import {
   Users,
   UserX,
   X,
+  XSquare,
 } from "angular-feather/icons";
 import {
   BellNotification,
@@ -75,6 +77,7 @@ import {
   LandingBullet3,
   Lock,
   Lock2,
+  MessageNotification,
   MultipleNfts,
   Quote,
   SingleNft,
@@ -104,6 +107,7 @@ const icons = {
   Coin,
   Copy,
   CreditCard,
+  CreatorCoin,
   Deso,
   DollarSign,
   Diamond,
@@ -129,6 +133,7 @@ const icons = {
   Lock,
   Lock2,
   Mail,
+  MessageNotification,
   MessageSquare,
   Monitor,
   MoreHorizontal,
@@ -148,6 +153,7 @@ const icons = {
   ShoppingBag,
   ShoppingCart,
   SingleNft,
+  ThumbsUp,
   Trash2,
   TrendingUp,
   User,
@@ -155,6 +161,7 @@ const icons = {
   UserPlus,
   UserX,
   X,
+  XSquare,
 };
 
 @NgModule({

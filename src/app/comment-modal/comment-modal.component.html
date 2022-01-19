@@ -1,6 +1,6 @@
 <div class="comment-modal">
   <div class="modal-header">
-    <div class="modal-header-x" (click)="bsModalRef.hide()">
+    <div class="modal-header-x" (click)="closeModal()">
       <i-feather name="x"></i-feather>
     </div>
   </div>
@@ -17,9 +17,8 @@
     ></feed-post>
   </div>
 
-
   <div class="fs-12px text-muted feed-create-comment-form__reply-container">
-    {{ isQuote ? "Quoting " : "Replying to " }}
+    {{ quoteReplyText() }}
     <span>@{{ parentPost.ProfileEntryResponse.Username }}</span>
   </div>
 
@@ -27,6 +26,7 @@
     [parentPost]="parentPost"
     [isQuote]="isQuote"
     [postRefreshFunc]="afterCommentCreatedCallback"
+    (postUpdated)="postUpdated($event)"
     (postCreated)="bsModalRef.hide()"
   ></feed-create-post>
 </div>

@@ -1,6 +1,16 @@
-import { Component, OnInit, ChangeDetectorRef, Input, EventEmitter, Output, ViewChild } from "@angular/core";
+import {
+  Component,
+  OnInit,
+  ChangeDetectorRef,
+  Input,
+  EventEmitter,
+  Output,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+} from "@angular/core";
 import { GlobalVarsService } from "../../global-vars.service";
-import { BackendApiService, BackendRoutes, PostEntryResponse } from "../../backend-api.service";
+import { BackendApiService, BackendRoutes, PostEntryResponse, ProfileEntryResponse } from "../../backend-api.service";
 import { Router, ActivatedRoute } from "@angular/router";
 import { SharedDialogs } from "../../../lib/shared-dialogs";
 import { CdkTextareaAutosize } from "@angular/cdk/text-field";
@@ -9,13 +19,16 @@ import { environment } from "../../../environments/environment";
 import * as tus from "tus-js-client";
 import Timer = NodeJS.Timer;
 import { CloudflareStreamService } from "../../../lib/services/stream/cloudflare-stream-service";
+import * as _ from "lodash";
+import { Mentionify } from "../../../lib/services/mention-autofill/mentionify";
+import { TranslocoService } from "@ngneat/transloco";
 
 @Component({
   selector: "feed-create-post",
   templateUrl: "./feed-create-post.component.html",
   styleUrls: ["./feed-create-post.component.sass"],
 })
-export class FeedCreatePostComponent implements OnInit {
+export class FeedCreatePostComponent implements OnInit, AfterViewInit {
   static SHOW_POST_LENGTH_WARNING_THRESHOLD = 515; // show warning at 515 characters
 
   EmbedUrlParserService = EmbedUrlParserService;
@@ -25,31 +38,34 @@ export class FeedCreatePostComponent implements OnInit {
   @Input() parentPost: PostEntryResponse = null;
   @Input() isQuote: boolean = false;
   @Input() inTutorial: boolean = false;
+  @Output() postUpdated = new EventEmitter<boolean>();
 
   isComment: boolean;
 
   @ViewChild("autosize") autosize: CdkTextareaAutosize;
+  @ViewChild("textarea") textAreaEl: ElementRef<HTMLTextAreaElement>;
+  @ViewChild("menu") menuEl: ElementRef<HTMLDivElement>;
 
   randomMovieQuote = "";
   randomMovieQuotes = [
-    "Go ahead, make my day.",
-    "The stuff that dreams are made of.",
-    "Made it, Ma! Top of the world!",
-    "I'll be back.",
-    "Open the pod bay doors, HAL.",
-    "Who's on first.",
-    "What's on second.",
-    "I feel the need - the need for speed!",
-    "I'm king of the world!",
-    "If you build it, they will come.",
-    "Roads? Where we're going we don't need roads",
-    "To infinity and beyond!",
-    "May the Force be with you",
-    "I've got a feeling we're not in Kansas anymore",
-    "E.T. phone home",
-    "Elementary, my dear Watson",
-    "I'm going to make him an offer he can't refuse.",
-    "Big things have small beginnings."
+    "feed_create_post.quotes.quote1",
+    "feed_create_post.quotes.quote2",
+    "feed_create_post.quotes.quote3",
+    "feed_create_post.quotes.quote4",
+    "feed_create_post.quotes.quote5",
+    "feed_create_post.quotes.quote6",
+    "feed_create_post.quotes.quote7",
+    "feed_create_post.quotes.quote8",
+    "feed_create_post.quotes.quote9",
+    "feed_create_post.quotes.quote10",
+    "feed_create_post.quotes.quote11",
+    "feed_create_post.quotes.quote12",
+    "feed_create_post.quotes.quote13",
+    "feed_create_post.quotes.quote14",
+    "feed_create_post.quotes.quote15",
+    "feed_create_post.quotes.quote16",
+    "feed_create_post.quotes.quote17",
+    "feed_create_post.quotes.quote18",
   ];
 
   submittingPost = false;
@@ -72,23 +88,98 @@ export class FeedCreatePostComponent implements OnInit {
   globalVars: GlobalVarsService;
   GlobalVarsService = GlobalVarsService;
 
+  fallbackProfilePicURL: string;
+
   constructor(
     private router: Router,
     private route: ActivatedRoute,
     private backendApi: BackendApiService,
     private changeRef: ChangeDetectorRef,
     private appData: GlobalVarsService,
-    private streamService: CloudflareStreamService
+    private streamService: CloudflareStreamService,
+    private translocoService: TranslocoService
   ) {
     this.globalVars = appData;
   }
 
+  // Functions for the mention autofill component
+  resolveFn = (prefix: string) => this.getUsersFromPrefix(prefix);
+
+  async getUsersFromPrefix(prefix): Promise<ProfileEntryResponse[]> {
+    const profiles = await this.backendApi
+      .GetProfiles(
+        this.globalVars.localNode,
+        "" /*PublicKeyBase58Check*/,
+        "" /*Username*/,
+        prefix.trim().replace(/^@/, "") /*UsernamePrefix*/,
+        "" /*Description*/,
+        "influencer_coin_price" /*Order by*/,
+        5 /*NumToFetch*/,
+        this.globalVars.loggedInUser.PublicKeyBase58Check /*ReaderPublicKeyBase58Check*/,
+        "" /*ModerationType*/,
+        false /*FetchUsersThatHODL*/,
+        false /*AddGlobalFeedBool*/
+      )
+      .toPromise();
+    return profiles.ProfilesFound as ProfileEntryResponse[];
+  }
+
+  // Create and format the item in the dropdown
+  menuItemFn = (user: ProfileEntryResponse, setItem: () => void, selected: boolean) => {
+    const div = document.createElement("div");
+    div.setAttribute("role", "option");
+    div.className = "menu-item";
+    if (selected) {
+      div.classList.add("selected");
+      div.setAttribute("aria-selected", "");
+    }
+
+    // Although it would be hard for an attacker to inject a malformed public key into the app,
+    // we do a basic _.escape anyways just to be extra safe.
+    const profPicURL = _.escape(
+      this.backendApi.GetSingleProfilePictureURL(
+        this.globalVars.localNode,
+        user.PublicKeyBase58Check,
+        this.fallbackProfilePicURL
+      )
+    );
+    div.innerHTML = `
+      <div class="d-flex align-items-center">
+        <img src="${profPicURL}" height="30px" width="30px" style="border-radius: 10px" class="mr-5px">
+        <p>${_.escape(user.Username)}</p>
+        ${user.IsVerified ? `<i class="fas fa-check-circle fa-md ml-5px fc-blue"></i>` : ""}
+      </div>`;
+    div.onclick = setItem;
+    return div;
+  };
+
+  replaceFn = (user: ProfileEntryResponse, trigger: string) => `${trigger}${user.Username} `;
+
+  setInputElementValue = (mention: string): void => {
+    this.postInput = `${mention}`;
+  };
+
   ngOnInit() {
     this.isComment = !this.isQuote && !!this.parentPost;
     this._setRandomMovieQuote();
+    // The fallback route is the route to the pic we use if we can't find an avatar for the user.
+    this.fallbackProfilePicURL = `fallback=${this.backendApi.GetDefaultProfilePictureURL(window.location.host)}`;
     if (this.inTutorial) {
       this.postInput = "It's Diamond time!";
     }
+  }
+
+  ngAfterViewInit() {
+    setTimeout(() => {
+      new Mentionify<ProfileEntryResponse>(
+        this.textAreaEl.nativeElement,
+        this.menuEl.nativeElement,
+        this.resolveFn,
+        this.replaceFn,
+        this.menuItemFn,
+        this.setInputElementValue
+      );
+    }, 50);
   }
 
   onPaste(event: any): void {
@@ -168,6 +259,14 @@ export class FeedCreatePostComponent implements OnInit {
       }
     }
 
+    if (environment.node.id) {
+      postExtraData["Node"] = environment.node.id.toString();
+    }
+
+    if (this.translocoService.getActiveLang()) {
+      postExtraData["Language"] = this.translocoService.getActiveLang();
+    }
+
     const bodyObj = {
       Body: this.postInput,
       // Only submit images if the post is a quoted repost or a vanilla post.
@@ -232,6 +331,9 @@ export class FeedCreatePostComponent implements OnInit {
       );
   }
 
+  updatePost() {
+    this.postUpdated.emit(this.postInput !== "");
+  }
   _createPost() {
     // Check if the user has an account.
     if (!this.globalVars?.loggedInUser) {

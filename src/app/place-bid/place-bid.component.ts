@@ -8,6 +8,7 @@ import { ToastrService } from "ngx-toastr";
 import { BsModalService } from "ngx-bootstrap/modal";
 import { Location } from "@angular/common";
 import { BuyDesoModalComponent } from "../buy-deso-page/buy-deso-modal/buy-deso-modal.component";
+import { TranslocoService } from "@ngneat/transloco";
 
 @Component({
   selector: "place-bid",
@@ -52,7 +53,8 @@ export class PlaceBidComponent implements OnInit {
     private modalService: BsModalService,
     private router: Router,
     private toastr: ToastrService,
-    private location: Location
+    private location: Location,
+    private translocoService: TranslocoService
   ) {}
 
   ngOnInit(): void {
@@ -101,6 +103,11 @@ export class PlaceBidComponent implements OnInit {
         )} DESO (${this.globalVars.nanosToUSD(this.selectedSerialNumber.MinBidAmountNanos, 2)})`
       );
     }
+  }
+
+  getPlaceBidText() {
+    const translationKey = this.placingBids ? "place_bid.placing_bid" : "place_bid.place_a_bid";
+    return this.translocoService.translate(translationKey);
   }
 
   placeBid() {
@@ -181,8 +188,8 @@ export class PlaceBidComponent implements OnInit {
     this.selectedSerialNumber = null;
   }
 
-  selectSerialNumber(idx: number) {
-    this.selectedSerialNumber = this.availableSerialNumbers.find((sn) => sn.SerialNumber === idx);
+  selectSerialNumber(serialNumber: NFTEntryResponse) {
+    this.selectedSerialNumber = serialNumber;
     this.saveSelection();
   }
 

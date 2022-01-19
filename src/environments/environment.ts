@@ -4,24 +4,25 @@
 
 export const environment = {
   production: false,
-  uploadImageHostname: "bitclout.com",
-  jumioEndpointHostname: "bitclout.com",
-  uploadVideoHostname: "bitclout.com",
+  uploadImageHostname: "node.deso.org",
+  verificationEndpointHostname: "http://localhost:18001",
+  uploadVideoHostname: "node.deso.org",
   identityURL: "https://identity.deso.org",
   supportEmail: "",
   dd: {
     apiKey: "DCEB26AC8BF47F1D7B4D87440EDCA6",
-    jsPath: "https://bitclout.com/tags.js",
-    ajaxListenerPath: "bitclout.com/api",
-    endpoint: "https://bitclout.com/js/",
+    jsPath: "https://diamondapp.com/tags.js",
+    ajaxListenerPath: "diamondapp.com/api",
+    endpoint: "https://diamondapp.com/js/",
   },
   amplitude: {
     key: "",
     domain: "",
   },
   node: {
-    name: 'Diamond',
-    url: 'https://diamond.co',
-    logoAssetDir: '/assets/diamond/'
-  }
+    id: 3,
+    name: "Diamond",
+    url: "https://diamondapp.com",
+    logoAssetDir: "/assets/diamond/",
+  },
 };
